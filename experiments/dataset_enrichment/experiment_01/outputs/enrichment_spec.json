@@ -1,0 +1,209 @@
+{
+  "study": "Delivery-delay enrichment V0",
+  "dataset_rows": 45593,
+  "cities": 22,
+  "date_range": [
+    "2022-02-11",
+    "2022-04-06"
+  ],
+  "prediction_point": "order",
+  "late_threshold_min": 33.0,
+  "baseline": "M0_raw",
+  "full_model": "M4_+weather",
+  "test_mae_raw": 3.592029799426235,
+  "test_mae_enriched": 3.225009513994219,
+  "relative_mae_gain": 0.10217629193684337,
+  "mae_gain_ci95": [
+    0.32684821508738515,
+    0.415935263895883
+  ],
+  "f1_raw": 0.8129032258064516,
+  "f1_enriched": 0.8313334842653385,
+  "cv_folds_won": 5,
+  "h3_share_of_inhouse_loss_recovered": 0.4210526315789472,
+  "dataset_weather_labels_look_real": false,
+  "verdict": "FAIL on H2: gains come from derived features (time/geo), not external data. That is feature engineering, not an enrichment product. Rethink before building.",
+  "api_stats": {
+    "open_meteo_calls": 22,
+    "open_meteo_cache_hits": 0,
+    "osrm_calls": 0,
+    "osrm_cache_hits": 0,
+    "osrm_failures": 0
+  },
+  "sources": [
+    {
+      "group": "time",
+      "kind": "derived",
+      "provider": "order timestamp",
+      "join_key": "order_ts",
+      "granularity": "per order",
+      "call_pattern": "none (pure function)",
+      "prod_notes": "Timezone handling; decide prediction point (order vs pickup) to avoid leaking prep time.",
+      "features": [
+        "t_hour",
+        "t_hour_sin",
+        "t_hour_cos",
+        "t_dow",
+        "t_dow_sin",
+        "t_dow_cos",
+        "t_is_weekend",
+        "t_day_of_month",
+        "t_salary_window",
+        "t_meal_period",
+        "t_is_peak"
+      ],
+      "row_coverage": 1.0,
+      "unique_mae_gain_min": 0.003,
+      "unique_mae_gain_ci95": [
+        -0.006,
+        0.009
+      ],
+      "significant": false,
+      "gain_share_in_full_model": 0.0862,
+      "top_feature": "t_hour_sin",
+      "recommendation": "KEEP (cheap)"
+    },
+    {
+      "group": "geo",
+      "kind": "derived",
+      "provider": "haversine + city centroid",
+      "join_key": "restaurant & drop coordinates",
+      "granularity": "per order",
+      "call_pattern": "none (pure function)",
+      "prod_notes": "Coordinate cleaning (sign flips, zeros, city mismatch) was required on the seed data.",
+      "features": [
+        "g_haversine_km",
+        "g_bearing_sin",
+        "g_bearing_cos",
+        "g_rest_to_center_km",
+        "g_drop_to_center_km"
+      ],
+      "row_coverage": 0.9202,
+      "unique_mae_gain_min": 0.768,
+      "unique_mae_gain_ci95": [
+        0.568,
+        0.996
+      ],
+      "significant": true,
+      "gain_share_in_full_model": 0.12,
+      "top_feature": "g_haversine_km",
+      "recommendation": "AUTOMATE"
+    },
+    {
+      "group": "holiday",
+      "kind": "external",
+      "provider": "python-holidays + curated regional festival calendar",
+      "join_key": "(date, state)",
+      "granularity": "daily x state",
+      "call_pattern": "offline table, rebuilt yearly",
+      "prod_notes": "Lunar and regional festivals move every year; curated calendar needs an owner. Add event data (cricket matches, local events) as a next source.",
+      "features": [
+        "h_is_holiday",
+        "h_is_national",
+        "h_days_to_next",
+        "h_days_since_prev",
+        "h_in_window",
+        "h_long_weekend",
+        "h_is_ramadan",
+        "h_iftar_window"
+      ],
+      "row_coverage": 1.0,
+      "unique_mae_gain_min": -0.001,
+      "unique_mae_gain_ci95": [
+        -0.007,
+        0.005
+      ],
+      "significant": false,
+      "gain_share_in_full_model": 0.0065,
+      "top_feature": "h_days_to_next",
+      "recommendation": "DEPRIORITISE (no measurable unique lift here)"
+    },
+    {
+      "group": "weather",
+      "kind": "external",
+      "provider": "Open-Meteo (archive for training, forecast API in production)",
+      "join_key": "(city or ~10 km geo-cell, hour ceiling)",
+      "granularity": "hourly",
+      "call_pattern": "1 call per cell x date-range, cached",
+      "prod_notes": "Training used reanalysis; production must use forecasts issued before order time (point-in-time correctness). Precip is hour-ending, so join on hour ceiling.",
+      "features": [
+        "w_temp_c",
+        "w_feels_like_c",
+        "w_humidity",
+        "w_precip_mm",
+        "w_rain_mm",
+        "w_cloud_pct",
+        "w_wind_kmh",
+        "w_wmo_code",
+        "w_precip_3h_mm",
+        "w_precip_24h_mm",
+        "w_precip_next1h_mm",
+        "w_temp_anomaly_day",
+        "w_is_rain",
+        "w_heavy_rain",
+        "w_rained_last_3h",
+        "w_hot"
+      ],
+      "row_coverage": 1.0,
+      "unique_mae_gain_min": -0.003,
+      "unique_mae_gain_ci95": [
+        -0.009,
+        0.002
+      ],
+      "significant": false,
+      "gain_share_in_full_model": 0.0372,
+      "top_feature": "w_temp_anomaly_day",
+      "recommendation": "DEPRIORITISE (no measurable unique lift here)"
+    }
+  ],
+  "cases": [
+    {
+      "scenario": "Rain at order time",
+      "kind": "best",
+      "order_id": "0xa79",
+      "actual": "48",
+      "raw_pred": 37.6,
+      "enriched_pred": 44.3
+    },
+    {
+      "scenario": "Rain at order time",
+      "kind": "typical",
+      "order_id": "0x40fe",
+      "actual": "12",
+      "raw_pred": 16.4,
+      "enriched_pred": 16.1
+    },
+    {
+      "scenario": "Holiday / festival window",
+      "kind": "best",
+      "order_id": "0x432f",
+      "actual": "45",
+      "raw_pred": 35.2,
+      "enriched_pred": 43.5
+    },
+    {
+      "scenario": "Holiday / festival window",
+      "kind": "typical",
+      "order_id": "0x6f6a",
+      "actual": "15",
+      "raw_pred": 16.8,
+      "enriched_pred": 16.6
+    },
+    {
+      "scenario": "Weekend dinner peak",
+      "kind": "best",
+      "order_id": "0x1725",
+      "actual": "29",
+      "raw_pred": 42.8,
+      "enriched_pred": 30.3
+    },
+    {
+      "scenario": "Weekend dinner peak",
+      "kind": "typical",
+      "order_id": "0x1a97",
+      "actual": "16",
+      "raw_pred": 13.4,
+      "enriched_pred": 13.5
+    }
+  ]
+}
