@@ -8,6 +8,12 @@ Each experiment contains the problem/question, experimental setup, methodology, 
 
 ## Experiments
 
+### 2. Positional Embeddings in GPT-2
+**Question:** What do GPT-2's learned positional embeddings encode, and how does the model use them?
+To investigate the geometry, Fourier structure, and causal role of GPT-2's learned position vectors, and how attention turns absolute positions into relative ones.
+**Folder:** [`position_embeddings`](./experiments/arithmetic_with_tokens/)
+[→ View Experiment](./experiments/position_embeddings/gpt2_positional_embeddings.ipynb)
+
 ### 1. Aritmetic with Tokens
 **Question:** Does GPT-2's embedding space encode arithmetic relationships?
 
